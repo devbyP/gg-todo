@@ -1,6 +1,6 @@
 (function () {
   /*----------- utilities type and function ----------*/
-  const goGet = (url) => {
+  const goGet = async (url) => {
     return fetch(url).then((res) => res.json());
   }
 
@@ -100,6 +100,10 @@
     goGet("/highlight").then(highlightColors.setAll).catch(console.error);
   });
 
+  /*--------------- Main New Todo --------------*/
+
+  const todoInput = document.getElementById("new-todo");
+
   /*------------ Pending Tags --------------*/
 
   class PendingTagsMap extends IdMap {
@@ -115,10 +119,10 @@
     }
   } 
 
-  const tagSubmitButton = document.getElementById("add-tag");
   const pendingTagDiv = document.getElementById("pending-tag");
   const tagInput = document.getElementById("input-tag");
   const newTagPendings = PendingTagsMap();
+  let showSelectColor = false;
 
   const cancleTagEvent = (tagId) => (event) => {
     event.stopPropagation();
@@ -128,9 +132,9 @@
 
   const selectTagColorEvent = (tagId, colorId) => (event) => {
     newTagPendings.selectColor(tagId, colorId);
-    const index = pendingTagDiv.children[newTagPendings.getIndexOf(tagId)];
+    const indexElement = pendingTagDiv.children[newTagPendings.getIndexOf(tagId)];
     const hexColor = highlightColors.get(colorId).hex;
-    index.style.background = hexColor;
+    indexElement.style.background = hexColor;
   }
 
   const createColorSelector = (idObj, name, hex) => {
@@ -139,7 +143,8 @@
     colorName.textContent = name;
     color.classList.add("color-selector");
     color.style.background = hex;
-    color.onclick(selectTagColorEvent(idObj.tagId, idObj.colorId));
+    color.addEventListener("click",
+      selectTagColorEvent(idObj.tagId, idObj.colorId));
     return color;
   }
 
@@ -148,17 +153,26 @@
     const tagName = document.createElement("p");
     const colorWrapper = document.createElement("div");
     tagName.textContent = newTagPendings.get(tagId).name;
+    const x = createCancleX();
+    x.addEventListener("click", (event) => {
+      showSelectColor = false;
+      event.target.parentNode.remove();
+    });
     wrapper.classList.add("highlight-selectors-wrapper");
     wrapper.append(tagName, colorWrapper);
     highlightColors.forEach((color, id) => {
       const ids = {tagId: tagId, colorId: id};
       colorWrapper.appendChild(createColorSelector(ids, color.name, color.hex));
-    })
+    });
     return wrapper;
   }
 
   const showHighlightSelectorEvent = (tagId) => (event) => {
-    
+    if (showSelectColor) {
+      return;
+    }
+    showSelectColor = true;
+    event.target.after(createTagHighlightSelectors(tagId));
   }
 
   const createTagPendingElement = (id, name) => {
@@ -167,21 +181,56 @@
     const tagName = document.createElement("span");
     tagName.textContent = name;
     const cancleX = createCancleX();
-    cancleX.onclick(cancleTagEvent(id))
+    cancleX.addEventListener("click", cancleTagEvent(id));
     tagWrapper.appendChild(tagName);
     tagWrapper.appendChild(cancleX);
+    tagWrapper.addEventListener("click", showHighlightSelectorEvent(tagId));
     return tagWrapper;
   }
 
-
-  const assignNewTag = (event) => {
-    event.preventDefault();
+  const suggestTags = (value) => {
+    const suggestArray = [];
+    availableTags.forEach((tag, id) => {
+      if (tag.name.toLowerCase().includes(value.toLowerCase())) {
+        suggestArray.push(id);
+      }
+    });
+    return suggestArray;
   }
 
-  tagSubmitButton.addEventListener("click", assignNewTag);
+  const assignNewTagEvent = (tagId) => (event) => {
+    const tag = availableTags.get(tagId);
+    newTagPendings.setId(tagId, {name: tag.name, color: 0});
+    pendingTagDiv.appendChild(createTagPendingElement(tagId, tag.name));
+    event.target.parentNode.remove();
+  }
 
-  /*--------------- Main New Todo --------------*/
+  const createTagSuggestListItem = (tagId) => {
+    const li = document.createElement("li");
+    li.textContent = availableTags.get(tagId).name;
+    li.addEventListener("click", assignNewTagEvent(tagId));
+    return li;
+  }
 
-  const todoInput = document.getElementById("new-todo");
+  const createTagSuggestList = (tags) => {
+    const ul = document.createElement("ul");
+    ul.classList.add("tag-suggest-list");
+    tags.forEach((tagId) => ul.appendChild(createTagSuggestListItem(tagId)));
+    return ul;
+  }
 
-})()
+  const tagSearchEvent = (event) => {
+    const tags = suggestTags(event.target.value);
+  }
+
+  tagInput.addEventListener("focus", (event) => {
+
+  });
+
+  tagInput.addEventListener("focusout", (event) => {
+
+  })
+
+  tagInput.addEventListener("change", tagSearchEvent);
+
+})();
