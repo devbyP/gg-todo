@@ -1,0 +1,61 @@
+* {
+  padding: 0;
+  margin: 0;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+/* List style */
+ul {
+  list-style: none;
+}
+
+/* Text style */
+h1 {
+  font-size: 3rem;
+  font-weight: 500;
+}
+
+h2 {
+  font-size: 2.5rem;
+  font-weight: 500;
+}
+
+h3 {
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+h4 {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+button {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* Input style */
+
+input[type="text"], input[type="number"] {
+  outline: none;
+}
+
+/* Button and clickable object style */
+
+button {
+  border-radius: 10px;
+}
+
+/* Layout style */
+
+
+/* ETC. */
+#add-form {
+  position: relative;
+}
+
+#highlight-picker {
+  position: absolute;
+  display: none;
+}

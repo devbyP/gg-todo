@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GG Hub</title>
+  <link href="/static/main.css" rel="stylesheet">
+</head>
+<body>
+  <header>
+    <nav>
+      <div class="GG"><h1>GG-HUB</h1></div>
+      <ul>
+        <li>
+          <a href="/projects">Projects</a>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <form>
+      <label for="n1">name here</span>
+      <input id="n1" type="text" name="user"/>
+      <button id="use-name">USE THIS NAME</button>
+    </form>
+    <div class="assistant-wrapper">
+      <h2>GG Assistant Reminder</h2>
+      <ul class="check-list">
+        {{range .Checklist}}
+          <li>
+            <input type=checkbox class="done-box"/>
+            {{.Name}} {{.Timestamp}}
+            <div class="tag">
+              {{range .Tags}}
+                {{.}}
+              {{end}}
+            </div>
+          </li>
+        {{end}}
+      </ul>
+
+      <div class="new-check">
+        <h3>New Check</h3>
+        <form id="add-form">
+          <input type="text" name="new-todo" id="new-todo"/>
+          <div id="pending-tag">
+            <h4>tags</h4>
+          </div>
+          <input type="text" name="tag" id="input-tag"/>
+          <button type="button" id="add-tag">TAG!</button>
+          <button type=submit>SUBMIT</button>
+        </form>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="/static/index.js"></script>
+</body>
+</html>
