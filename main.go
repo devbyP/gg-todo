@@ -6,6 +6,8 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+
+	"gghub.com/model"
 )
 
 const (
@@ -20,10 +22,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(addr, nil))
 }
 
-type tag string
-
 // use as the second argument of the only one HandleFunc in sever.
-//
 func baseHandler(writer http.ResponseWriter, request *http.Request) {
 	// log all the incoming request.
 	logRequest(request.Method, request.Host, request.URL.Path)
@@ -37,29 +36,74 @@ func baseHandler(writer http.ResponseWriter, request *http.Request) {
 		switch request.Method {
 		case http.MethodGet:
 			homePage(writer, request)
-		case http.MethodPost:
-			fmt.Println(request.FormValue("message"))
-			querystring := "?message=test"
-			http.Redirect(writer, request, "/"+querystring, http.StatusSeeOther)
 		}
-
-	case "/tag":
-		if request.Method == http.MethodPost {
-			//tag := request.Body
-			// write to database.
-			result, err := json.Marshal(struct{ ResultOk bool }{ResultOk: true})
-			if err != nil {
-				http.Error(writer, "cannot parse result to json.", http.StatusInternalServerError)
-			}
-			setContentJsonHeader(writer)
-			writer.WriteHeader(http.StatusOK)
-			writer.Write(result)
-		}
-		writeNotFound(writer)
+	case "todo":
+		todoRoute(writer, request)
+	case "/tags":
+		tagsRoute(writer, request)
+	case "/highlight":
+		highlightRoute(writer, request)
 	default:
 		writeNotFound(writer)
 	}
+}
 
+func todoRoute(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		postTodo(w, r)
+	}
+}
+
+func tagsRoute(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		setContentJsonHeader(w)
+		tags, err := model.GetNumOfTag(10)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Println(err)
+			w.Write([]byte("error getting tags."))
+			return
+		}
+		result, err := json.Marshal(tags)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("error cannot parse json."))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write(result)
+	case http.MethodPost:
+		setContentJsonHeader(w)
+		w.WriteHeader(http.StatusNoContent)
+	default:
+		writeNotFound(w)
+	}
+}
+
+func highlightRoute(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		setContentJsonHeader(w)
+		colors, err := model.GetAllHighlight()
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Println(err)
+			w.Write([]byte("server error cannot get highlight color."))
+			return
+		}
+		result, err := json.Marshal(colors)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("error cannot parse json."))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write(result)
+	default:
+		writeNotFound(w)
+	}
 }
 
 func setContentJsonHeader(w http.ResponseWriter) {

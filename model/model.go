@@ -48,18 +48,44 @@ type scanner interface {
 }
 
 type Todo struct {
-	ID        int
-	Name      string
-	CreatedOn time.Time
+	ID        int       `json:"id"`
+	Name      string    `json:"name"`
+	CreatedOn time.Time `json:"created_on"`
 }
 
-func addTodo(todo string) (int64, error) {
-	result, err := db.Exec("INSERT INTO todos(name) VALUES($1)",
-		todo)
+func selectMultipleTodo(sql string, args ...interface{}) ([]*Todo, error) {
+	todos := make([]*Todo, 0)
+	rows, err := db.Query(sql, args...)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	id, err := result.LastInsertId()
+	defer rows.Close()
+	for rows.Next() {
+		todo := new(Todo)
+		err = todo.fullScan(rows)
+		if err != nil {
+			return nil, err
+		}
+		todos = append(todos, todo)
+	}
+	return todos, nil
+}
+
+func selectOneTodo(sql string, args ...interface{}) (*Todo, error) {
+	todo := new(Todo)
+	row := db.QueryRow(sql, args...)
+	err := todo.fullScan(row)
+	if err != nil {
+		return nil, err
+	}
+	return todo, nil
+}
+
+func AddTodo(todo string) (int, error) {
+	row := db.QueryRow("INSERT INTO todos(name) VALUES($1) RETURNING id",
+		todo)
+	var id int
+	err := row.Scan(&id)
 	if err != nil {
 		return 0, err
 	}
@@ -67,28 +93,19 @@ func addTodo(todo string) (int64, error) {
 }
 
 func getTodos() ([]*Todo, error) {
-	rows, err := db.Query("SELECT id, name, created_on FROM todos")
-	todoList := make([]*Todo, 0)
-	if err != nil {
-		return todoList, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		todo := new(Todo)
-		todo.fullScan(rows)
-		todoList = append(todoList, todo)
-	}
-	return todoList, nil
+	return selectMultipleTodo("SELECT id, name, created_on FROM todos")
 }
 
 func getTodo(id int) (*Todo, error) {
-	todo := new(Todo)
-	row := db.QueryRow("SELECT id, name, created_on FROM todos WHERE id=$1", id)
-	err := todo.fullScan(row)
+	return selectOneTodo("SELECT id, name, created_on FROM todos WHERE id=$1", id)
+}
+
+func DeleteTodoById(id int) error {
+	_, err := db.Exec("DELETE FROM todos WHERE id=$1", id)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return todo, nil
+	return nil
 }
 
 func deleteTodoByName(name string) {
@@ -106,40 +123,52 @@ func (t *Todo) fullScan(rows scanner) error {
 }
 
 type Tag struct {
-	ID   int
-	Name string
+	ID   int    `json:"id"`
+	Name string `json:"name"`
 }
 
-func SearchTags(searchText string) ([]*Tag, error) {
+func selectMultipleTag(sql string, args ...interface{}) ([]*Tag, error) {
 	tags := make([]*Tag, 0)
-	rows, err := db.Query("SELECT id, name FROM tags WHERE name like '%' || $1 || '%'", searchText)
+	rows, err := db.Query(sql, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		tag := new(Tag)
-		tag.fullScan(rows)
+		err = tag.fullScan(rows)
+		if err != nil {
+			return nil, err
+		}
 		tags = append(tags, tag)
 	}
 	return tags, nil
 }
 
-func AddTag(name string) (int64, error) {
-	result, err := db.Exec("INSERT INTO tags(name) VALUES($1)", name)
+func selectOneTag(sql string, args ...interface{}) (*Tag, error) {
+	tag := new(Tag)
+	row := db.QueryRow(sql, args...)
+	err := tag.fullScan(row)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	id, err := result.LastInsertId()
-	if err != nil {
-		return 0, err
-	}
-	return id, nil
+	return tag, nil
 }
 
-func getTagId(name string) (int, error) {
+func GetNumOfTag(limit int) ([]*Tag, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	return selectMultipleTag("SELECT id, name FROM tags LIMIT $1", limit)
+}
+
+func SearchTags(searchText string) ([]*Tag, error) {
+	return selectMultipleTag("SELECT id, name FROM tags WHERE name like '%' || $1 || '%'", searchText)
+}
+
+func AddTag(name string) (int, error) {
+	row := db.QueryRow("INSERT INTO tags(name) VALUES($1) RETURNING id", name)
 	var id int
-	row := db.QueryRow("SELECT id FROM tags WHERE name=$1", name)
 	err := row.Scan(&id)
 	if err != nil {
 		return 0, err
@@ -147,29 +176,53 @@ func getTagId(name string) (int, error) {
 	return id, nil
 }
 
+func getTagById(name int) (*Tag, error) {
+	return selectOneTag("SELECT id FROM tags WHERE name=$1", name)
+}
+
 func (t *Tag) fullScan(rows scanner) error {
 	return rows.Scan(&t.ID, &t.Name)
 }
 
 type HighlightColor struct {
-	ID   int
-	Name string
-	Hex  string
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+	Hex  string `json:"hex"`
 }
 
-func SelectHighlight() ([]*HighlightColor, error) {
-	var colors []*HighlightColor = make([]*HighlightColor, 0)
-	rows, err := db.Query("SELECT id, name, hex FROM highlight")
+func selectMultipleColor(sql string, args ...interface{}) ([]*HighlightColor, error) {
+	colors := make([]*HighlightColor, 0)
+	rows, err := db.Query(sql, args...)
 	if err != nil {
-		return colors, err
+		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		color := new(HighlightColor)
-		color.fullScan(rows)
+		err = color.fullScan(rows)
+		if err != nil {
+			return nil, err
+		}
 		colors = append(colors, color)
 	}
 	return colors, nil
+}
+
+func selectOneColor(sql string, args ...interface{}) (*HighlightColor, error) {
+	color := new(HighlightColor)
+	row := db.QueryRow(sql, args...)
+	if err := color.fullScan(row); err != nil {
+		return nil, err
+	}
+	return color, nil
+}
+
+func GetAllHighlight() ([]*HighlightColor, error) {
+	return selectMultipleColor("SELECT id, name, hex FROM highlightcolor")
+}
+
+func getColorById(id int) (*HighlightColor, error) {
+	return selectOneColor("SELECT id, name, hex FROM highlightcolor WHERE id=$1", id)
 }
 
 func (hl *HighlightColor) fullScan(rows scanner) error {
@@ -177,23 +230,61 @@ func (hl *HighlightColor) fullScan(rows scanner) error {
 }
 
 type TodoTag struct {
-	Todo      int
-	Tag       int
-	Highligth int
+	Todo      int `json:"todo_id"`
+	Tag       int `json:"tag_id"`
+	Highligth int `json:"highlight_id"`
 }
 
-func getTagsAndHighlightInTodo(todoID int) ([]*TodoTag, error) {
+func InsertTodoTag(todo, tag, color int) error {
+	var err error
+	if color == 0 {
+		_, err = db.Exec(`INSERT INTO todotags(todo_id, tag_id) VALUES($1, $2)`, todo, tag)
+	} else {
+		_, err = db.Exec(`INSERT INTO todotags(
+			todo_id, tag_id, highlight_id
+		) VALUES($1, $2, $3)`, todo, tag, color)
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func selectMultipleTodoTags(sql string, args ...interface{}) ([]*TodoTag, error) {
 	todoTags := make([]*TodoTag, 0)
-	rows, err := db.Query("SELECT todo_id, tag_id, highlight_id FROM todotags WHERE todo_id=$1", todoID)
+	rows, err := db.Query(sql, args...)
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
 		tt := new(TodoTag)
-		tt.fullScan(rows)
+		if err := tt.fullScan(rows); err != nil {
+			return nil, err
+		}
 		todoTags = append(todoTags, tt)
 	}
 	return todoTags, nil
+}
+
+func selectOneTodoTag(sql string, args ...interface{}) (*TodoTag, error) {
+	todoTag := new(TodoTag)
+	row := db.QueryRow(sql, args...)
+	if err := todoTag.fullScan(row); err != nil {
+		return nil, err
+	}
+	return todoTag, nil
+}
+
+func getTagsAndHighlightInTodo(todoID int) ([]*TodoTag, error) {
+	return selectMultipleTodoTags("SELECT todo_id, tag_id, highlight_id FROM todotags WHERE todo_id=$1", todoID)
+}
+
+func getOneTagInTodo(todoId, tagId int) (*TodoTag, error) {
+	return selectOneTodoTag("SELECT todo_id, tag_id, highlight_id FROM todotags WHERE todo_id=$1 AND tag_id=$2", todoId, tagId)
+}
+
+func getTodoThatIncludeTag(tagId int) ([]*TodoTag, error) {
+	return selectMultipleTodoTags("SELECT todo_id, tag_id, highlight_id FROm todotags WHERE tag_id=$1", tagId)
 }
 
 func (tt *TodoTag) fullScan(rows scanner) error {
@@ -202,7 +293,9 @@ func (tt *TodoTag) fullScan(rows scanner) error {
 
 type FullTodo map[string]interface{}
 
-func NewFullTodo(todo *Todo, tags []*TodoTag) FullTodo {
+type fullTag map[string]string
+
+func NewFullTodo(todo *Todo, tags []fullTag) FullTodo {
 	return FullTodo{
 		"id":         todo.ID,
 		"name":       todo.Name,
@@ -211,15 +304,47 @@ func NewFullTodo(todo *Todo, tags []*TodoTag) FullTodo {
 	}
 }
 
-func GetFullTodo(todoID int) (FullTodo, error) {
+func getFullTodo(todoID int) (FullTodo, error) {
 	todo, err := getTodo(todoID)
 	if err != nil {
 		return nil, err
 	}
-	tags, err := getTagsAndHighlightInTodo(todo.ID)
+	todotags, err := getTagsAndHighlightInTodo(todo.ID)
 	if err != nil {
 		return nil, err
 	}
-	todoItem := NewFullTodo(todo, tags)
+	fTags := make([]fullTag, len(todotags))
+	for i := 0; i < len(todotags); i++ {
+		tag, err := getTagById(todotags[i].Tag)
+		if err != nil {
+			return nil, err
+		}
+		color, err := getColorById(todotags[i].Highligth)
+		if err != nil {
+			return nil, err
+		}
+		fTags[i]["TagName"] = tag.Name
+		fTags[i]["Color"] = color.Name
+		fTags[i]["ColorHex"] = color.Hex
+	}
+	todoItem := NewFullTodo(todo, fTags)
+
 	return todoItem, nil
+}
+
+func GetAllFullTodo() ([]FullTodo, error) {
+	var fullTodos []FullTodo
+	todos, err := getTodos()
+	if err != nil {
+		return nil, err
+	}
+	for i := 0; i < len(todos); i++ {
+		todo := todos[i]
+		fullTodo, err := getFullTodo(todo.ID)
+		if err != nil {
+			return nil, err
+		}
+		fullTodos = append(fullTodos, fullTodo)
+	}
+	return fullTodos, nil
 }

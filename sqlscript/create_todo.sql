@@ -22,7 +22,7 @@ CREATE TABLE highlightcolor (
 );
 
 CREATE TABLE todotags (
-  todos_id INT NOT NULL,
+  todo_id INT NOT NULL,
   tag_id INT NOT NULL,
   highlight_id INT,
   PRIMARY KEY (todos_id, tag_id),

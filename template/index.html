@@ -21,7 +21,7 @@
 
   <main>
     <form>
-      <label for="n1">name here</span>
+      <label for="n1">name here</label>
       <input id="n1" type="text" name="user"/>
       <button id="use-name">USE THIS NAME</button>
     </form>
@@ -44,17 +44,19 @@
       <div class="new-check">
         <h3>New Check</h3>
         <form id="add-form">
-          <input type="text" name="new-todo" id="new-todo"/>
-          <button type=submit>SUBMIT</button>
+          <input type="text" name="new-todo" />
+          <button type=submit id="todoBtn">SUBMIT</button>
         </form>
-        <div id="tag-inputW">
-          <div id="pending-tag">
+        <form id="tag-inputW">
+          <div class="new-tags">
             <h4>tags</h4>
+            <div id="pending-tag">
+            </div>
           </div>
-
-          <input type="text" name="tag" id="input-tag"/>
-          <button type="button" id="add-tag">TAG!</button>
-        </div>>
+          <div id="input-tag-div">
+            <input type="search" name="tag" id="input-tag"/>
+          </div>
+        </form>
       </div>
     </div>
   </main>
