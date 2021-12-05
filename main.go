@@ -36,8 +36,10 @@ func baseHandler(writer http.ResponseWriter, request *http.Request) {
 		switch request.Method {
 		case http.MethodGet:
 			homePage(writer, request)
+		default:
+			writeNotFound(writer)
 		}
-	case "todo":
+	case "/todo":
 		todoRoute(writer, request)
 	case "/tags":
 		tagsRoute(writer, request)

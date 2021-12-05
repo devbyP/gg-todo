@@ -345,7 +345,7 @@
       });
     });
     disableForm();
-    fetch("/", {
+    fetch("/todo", {
       method: "POST",
       headers: {"Content-type": "application/json"},
       body: JSON.stringify(body),

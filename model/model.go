@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"time"
+  "os"
+  "github.com/joho/godotenv"
 
 	_ "github.com/lib/pq"
 )
@@ -12,21 +14,39 @@ import (
 var db *sql.DB
 
 func init() {
-	db = conDatabase()
+  godotenv.Load(".env")
+  connectionInfo := dbConnectionInfo{
+    dbName: os.Getenv("DB_NAME"),
+    user: os.Getenv("DB_USER"),
+    password: os.Getenv("DB_PASSWORD"),
+    port: os.Getenv("DB_PORT"),
+    host: os.Getenv("HOSTNAME"),
+  }
+	db = conDatabase(connectionInfo)
 }
 
-const (
-	dbname   = "todo"
-	user     = "postgres"
-	password = "postgres"
-	port     = "5432"
-	host     = "localhost"
-)
+type dbConnectionInfo struct {
+  dbName string
+  user string
+  password string
+  port string
+  host string
+}
 
-func conDatabase() *sql.DB {
-	dbInfo := fmt.Sprintf(`host=%s port=%s user=%s 
-		password=%s dbname=%s sslmode=disable`,
-		host, port, user, password, dbname)
+func conDatabase(info dbConnectionInfo) *sql.DB {
+	dbInfo := fmt.Sprintf(
+    `host=%s
+    port=%s
+    user=%s 
+		password=%s
+    dbname=%s
+    sslmode=disable`,
+		info.host,
+    info.port,
+    info.user,
+    info.password,
+    info.dbName,
+  )
 	db, err := sql.Open("postgres", dbInfo)
 	if err != nil {
 		panic(err)
@@ -51,6 +71,7 @@ type Todo struct {
 	ID        int       `json:"id"`
 	Name      string    `json:"name"`
 	CreatedOn time.Time `json:"created_on"`
+	CheckedOn time.Time `json:"checked_on"`
 }
 
 func selectMultipleTodo(sql string, args ...interface{}) ([]*Todo, error) {
@@ -93,11 +114,11 @@ func AddTodo(todo string) (int, error) {
 }
 
 func getTodos() ([]*Todo, error) {
-	return selectMultipleTodo("SELECT id, name, created_on FROM todos")
+	return selectMultipleTodo("SELECT id, name, created_on FROM todos WHERE checked_on IS NULL")
 }
 
 func getTodo(id int) (*Todo, error) {
-	return selectOneTodo("SELECT id, name, created_on FROM todos WHERE id=$1", id)
+	return selectOneTodo("SELECT id, name, created_on FROM todos WHERE id=$1 AND checked_on IS NULL", id)
 }
 
 func DeleteTodoById(id int) error {
@@ -176,8 +197,8 @@ func AddTag(name string) (int, error) {
 	return id, nil
 }
 
-func getTagById(name int) (*Tag, error) {
-	return selectOneTag("SELECT id FROM tags WHERE name=$1", name)
+func getTagById(tagId int) (*Tag, error) {
+	return selectOneTag("SELECT id, name FROM tags WHERE id=$1", tagId)
 }
 
 func (t *Tag) fullScan(rows scanner) error {
@@ -313,8 +334,9 @@ func getFullTodo(todoID int) (FullTodo, error) {
 	if err != nil {
 		return nil, err
 	}
-	fTags := make([]fullTag, len(todotags))
+	fTags := make([]fullTag, 0)
 	for i := 0; i < len(todotags); i++ {
+		t := make(fullTag)
 		tag, err := getTagById(todotags[i].Tag)
 		if err != nil {
 			return nil, err
@@ -323,9 +345,10 @@ func getFullTodo(todoID int) (FullTodo, error) {
 		if err != nil {
 			return nil, err
 		}
-		fTags[i]["TagName"] = tag.Name
-		fTags[i]["Color"] = color.Name
-		fTags[i]["ColorHex"] = color.Hex
+		t["tag_name"] = tag.Name
+		t["color"] = color.Name
+		t["color_hex"] = color.Hex
+		fTags = append(fTags, t)
 	}
 	todoItem := NewFullTodo(todo, fTags)
 

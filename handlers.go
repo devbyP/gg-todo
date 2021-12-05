@@ -5,17 +5,18 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strconv"
 
 	"gghub.com/model"
 )
 
 func homePage(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.URL.Query().Get("id"))
-	allTodo, err := model.GetFullTodo(id)
+	allTodo, err := model.GetAllFullTodo()
 	if err != nil {
-		//
+		log.Printf("Error cannot get todolist: %v\n", err)
+		http.Error(w, "cannot get todolist.", http.StatusInternalServerError)
+		return
 	}
+	log.Println(allTodo)
 	attr := map[string]interface{}{
 		"Checklist": allTodo,
 	}

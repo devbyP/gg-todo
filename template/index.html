@@ -31,10 +31,14 @@
         {{range .Checklist}}
           <li>
             <input type=checkbox class="done-box"/>
-            {{.Name}} {{.Timestamp}}
+            {{.id}}
+            {{.name}}
+            {{.created_on}}
             <div class="tag">
-              {{range .Tags}}
-                {{.}}
+              {{range .tags}}
+                {{.tag_name}}
+                {{.color}}
+                {{.color_hex}}
               {{end}}
             </div>
           </li>

@@ -25,8 +25,8 @@ CREATE TABLE todotags (
   todo_id INT NOT NULL,
   tag_id INT NOT NULL,
   highlight_id INT,
-  PRIMARY KEY (todos_id, tag_id),
-  FOREIGN KEY (todos_id) REFERENCES todos (ID),
+  PRIMARY KEY (todo_id, tag_id),
+  FOREIGN KEY (todo_id) REFERENCES todos (ID),
   FOREIGN KEY (tag_id) REFERENCES tags (ID),
   FOREIGN KEY (highlight_id) REFERENCES highlightcolor (ID)
 );
